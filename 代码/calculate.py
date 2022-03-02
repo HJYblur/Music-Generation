@@ -1,7 +1,7 @@
 import numpy as np
 from definition import Song, Music
 from read import songs
-from tool import Play
+from tool import *
 
 debug = False
 Num = 10  # 生成的旋律数
@@ -10,6 +10,8 @@ Num = 10  # 生成的旋律数
 stressedDic = np.zeros((7, 4, 37), dtype=int)
 # 从左到右分别是：轻音，轻音前后的两个重音
 unstressedDic = np.zeros((37, 37, 37), dtype=int)
+hnn = [0.51455546, 0.07879776, 0.17814136, 0.36722034, 0.33739019, 0.27546282,
+       0.03413839, 0.43721854, 0.26734545, 0.2695031, 0.16808418, 0.08968431]
 
 
 def chord2num(chord):
@@ -85,6 +87,7 @@ def Calculate():
                     unstressedDic[syllable, front, rear] += 1
 
     if debug:
+        np.set_printoptions(formatter={'int': '{:d}'.format})
         print("Below: StressedDic")
         print(stressedDic)
         print("Below: UnStressedDic")
@@ -98,6 +101,7 @@ def sigmoid(X):
 def normalization1(Dic):  # 计算概率
     dic = np.array(Dic, np.float32)
     if np.sum(dic[:]) != 0.0:
+        dic[:] = pow(dic[:], 2)
         dic[:] = dic[:] / np.sum(dic[:])
     else:
         n = dic.shape[0]
@@ -106,20 +110,22 @@ def normalization1(Dic):  # 计算概率
     return dic
 
 
-def normalization2(Dic):  # 计算概率
-    dic = np.array(Dic, np.float32)
-    if np.sum(dic[:, :]) != 0.0:
-        dic[:, :] = dic[:, :] / np.sum(dic[:, :])
-    return dic
+# def normalization2(Dic):  # 计算概率
+#     dic = np.array(Dic, np.float32)
+#     if np.sum(dic[:, :]) != 0.0:
+#         dic[:, :] = dic[:, :] / np.sum(dic[:, :])
+#     return dic
 
 
 def normalization3(Dic):  # 计算概率
     dic = np.array(Dic, np.float32)
     if np.sum(dic[:, :, :]) != 0.0:
+        dic[:, :, :] = pow(dic[:, :, :], 2)
         dic[:, :, :] = dic[:, :, :] / np.sum(dic[:, :, :])
     # print(dic)
     if debug:
         print("Below is the prediction of dic after normalization")
+        np.set_printoptions(formatter={'float': '{:3f}'.format})
         print(dic)
     return dic
 
@@ -139,6 +145,12 @@ def twl2sev(twl):
 
 def regeneration():
     p1 = normalization3(stressedDic)
+    for c in range(7):
+        for i in range(4):
+            for j in range(37):
+                chord = num2chord(c + 1)
+                list = Chord_Dig.get(chord)
+                p1[c][i][j] *= HCN(list, j, hnn)
     p2 = normalization3(unstressedDic)
 
     # 生成和弦
@@ -191,5 +203,5 @@ def printMusic(dic):
         np.set_printoptions(formatter={'int': '{:d}'.format})
         print(dic[i].tune)
         print(dic[i].octave)
-        tune.append([dic[i].chord,dic[i].tune,dic[i].octave])
+        tune.append([dic[i].chord, dic[i].tune, dic[i].octave])
     Play(tune)
